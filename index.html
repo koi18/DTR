@@ -676,6 +676,131 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
     <script>
+
+let currentPage = 1;
+let entriesPerPage = 5;
+let totalPages = 0;
+
+function initializePagination() {
+    // Get the entries per page select element
+    const entriesSelect = document.getElementById('entriesPerPage');
+    
+    // Add event listeners
+    entriesSelect.addEventListener('change', (e) => {
+        entriesPerPage = parseInt(e.target.value);
+        currentPage = 1;
+        displayTableData();
+    });
+
+    document.getElementById('prevPage').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            displayTableData();
+        }
+    });
+
+    document.getElementById('nextPage').addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            displayTableData();
+        }
+    });
+
+    // Initial display
+    displayTableData();
+}
+
+function displayTableData() {
+    const dtrRecords = JSON.parse(localStorage.getItem('dtrRecords') || '[]');
+    const tbody = document.getElementById('dtrTableBody');
+    
+    // Calculate pagination values
+    const startIndex = (currentPage - 1) * entriesPerPage;
+    const endIndex = startIndex + entriesPerPage;
+    const paginatedData = dtrRecords.slice(startIndex, endIndex);
+    
+    // Clear existing table data
+    tbody.innerHTML = '';
+    
+    // Display paginated data
+    paginatedData.forEach((record, index) => {
+        createTableRow(record, startIndex + index, tbody);
+    });
+    
+    // Update pagination UI
+    updatePaginationUI(dtrRecords.length);
+}
+
+function updatePaginationUI(totalRecords) {
+    // Calculate total pages
+    totalPages = Math.ceil(totalRecords / entriesPerPage);
+    
+    // Update summary information
+    const startEntry = totalRecords === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1;
+    const endEntry = Math.min(currentPage * entriesPerPage, totalRecords);
+    
+    document.getElementById('startEntry').textContent = startEntry;
+    document.getElementById('endEntry').textContent = endEntry;
+    document.getElementById('totalEntries').textContent = totalRecords;
+    
+    // Update button states
+    document.getElementById('prevPage').disabled = currentPage === 1;
+    document.getElementById('nextPage').disabled = currentPage === totalPages;
+    
+    // Update page numbers
+    const pageNumbers = document.getElementById('pageNumbers');
+    pageNumbers.innerHTML = '';
+    
+    for (let i = 1; i <= totalPages; i++) {
+        if (
+            i === 1 || // First page
+            i === totalPages || // Last page
+            (i >= currentPage - 1 && i <= currentPage + 1) // Pages around current page
+        ) {
+            const pageButton = document.createElement('button');
+            pageButton.className = `page-number ${currentPage === i ? 'active' : ''}`;
+            pageButton.textContent = i;
+            pageButton.onclick = () => {
+                currentPage = i;
+                displayTableData();
+            };
+            pageNumbers.appendChild(pageButton);
+        } else if (
+            (i === currentPage - 2 && currentPage > 3) ||
+            (i === currentPage + 2 && currentPage < totalPages - 2)
+        ) {
+            // Add ellipsis
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'page-ellipsis';
+            ellipsis.textContent = '...';
+            pageNumbers.appendChild(ellipsis);
+        }
+    }
+}
+
+// Initialize pagination when the window loads
+window.addEventListener('load', initializePagination);
+
+// Update these existing functions to work with pagination
+function deleteRecord(index, row) {
+    row.classList.add('animate__animated', 'animate__fadeOut');
+    
+    setTimeout(() => {
+        row.remove();
+        let dtrRecords = JSON.parse(localStorage.getItem('dtrRecords') || '[]');
+        dtrRecords.splice(index, 1);
+        localStorage.setItem('dtrRecords', JSON.stringify(dtrRecords));
+        displayTableData(); // Refresh pagination after delete
+    }, 500);
+}
+
+// Modify your form submit handler to include this at the end
+document.getElementById('dtrForm').addEventListener('submit', function(e) {
+    // ... existing code ...
+    
+    // After successfully adding a new record
+    displayTableData(); // Refresh pagination with new data
+});
 function initChart() {
             const ctx = document.getElementById('hoursChart').getContext('2d');
             const records = JSON.parse(localStorage.getItem('dtrRecords') || '[]');
@@ -1261,130 +1386,7 @@ window.addEventListener('load', function() {
 
 document.getElementById('modalOverlay').addEventListener('click', closeModal);
 
-let currentPage = 1;
-let entriesPerPage = 5;
-let totalPages = 0;
 
-function initializePagination() {
-    // Get the entries per page select element
-    const entriesSelect = document.getElementById('entriesPerPage');
-    
-    // Add event listeners
-    entriesSelect.addEventListener('change', (e) => {
-        entriesPerPage = parseInt(e.target.value);
-        currentPage = 1;
-        displayTableData();
-    });
-
-    document.getElementById('prevPage').addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            displayTableData();
-        }
-    });
-
-    document.getElementById('nextPage').addEventListener('click', () => {
-        if (currentPage < totalPages) {
-            currentPage++;
-            displayTableData();
-        }
-    });
-
-    // Initial display
-    displayTableData();
-}
-
-function displayTableData() {
-    const dtrRecords = JSON.parse(localStorage.getItem('dtrRecords') || '[]');
-    const tbody = document.getElementById('dtrTableBody');
-    
-    // Calculate pagination values
-    const startIndex = (currentPage - 1) * entriesPerPage;
-    const endIndex = startIndex + entriesPerPage;
-    const paginatedData = dtrRecords.slice(startIndex, endIndex);
-    
-    // Clear existing table data
-    tbody.innerHTML = '';
-    
-    // Display paginated data
-    paginatedData.forEach((record, index) => {
-        createTableRow(record, startIndex + index, tbody);
-    });
-    
-    // Update pagination UI
-    updatePaginationUI(dtrRecords.length);
-}
-
-function updatePaginationUI(totalRecords) {
-    // Calculate total pages
-    totalPages = Math.ceil(totalRecords / entriesPerPage);
-    
-    // Update summary information
-    const startEntry = totalRecords === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1;
-    const endEntry = Math.min(currentPage * entriesPerPage, totalRecords);
-    
-    document.getElementById('startEntry').textContent = startEntry;
-    document.getElementById('endEntry').textContent = endEntry;
-    document.getElementById('totalEntries').textContent = totalRecords;
-    
-    // Update button states
-    document.getElementById('prevPage').disabled = currentPage === 1;
-    document.getElementById('nextPage').disabled = currentPage === totalPages;
-    
-    // Update page numbers
-    const pageNumbers = document.getElementById('pageNumbers');
-    pageNumbers.innerHTML = '';
-    
-    for (let i = 1; i <= totalPages; i++) {
-        if (
-            i === 1 || // First page
-            i === totalPages || // Last page
-            (i >= currentPage - 1 && i <= currentPage + 1) // Pages around current page
-        ) {
-            const pageButton = document.createElement('button');
-            pageButton.className = `page-number ${currentPage === i ? 'active' : ''}`;
-            pageButton.textContent = i;
-            pageButton.onclick = () => {
-                currentPage = i;
-                displayTableData();
-            };
-            pageNumbers.appendChild(pageButton);
-        } else if (
-            (i === currentPage - 2 && currentPage > 3) ||
-            (i === currentPage + 2 && currentPage < totalPages - 2)
-        ) {
-            // Add ellipsis
-            const ellipsis = document.createElement('span');
-            ellipsis.className = 'page-ellipsis';
-            ellipsis.textContent = '...';
-            pageNumbers.appendChild(ellipsis);
-        }
-    }
-}
-
-// Initialize pagination when the window loads
-window.addEventListener('load', initializePagination);
-
-// Update these existing functions to work with pagination
-function deleteRecord(index, row) {
-    row.classList.add('animate__animated', 'animate__fadeOut');
-    
-    setTimeout(() => {
-        row.remove();
-        let dtrRecords = JSON.parse(localStorage.getItem('dtrRecords') || '[]');
-        dtrRecords.splice(index, 1);
-        localStorage.setItem('dtrRecords', JSON.stringify(dtrRecords));
-        displayTableData(); // Refresh pagination after delete
-    }, 500);
-}
-
-// Modify your form submit handler to include this at the end
-document.getElementById('dtrForm').addEventListener('submit', function(e) {
-    // ... existing code ...
-    
-    // After successfully adding a new record
-    displayTableData(); // Refresh pagination with new data
-});
 
     </script>
 </body>
